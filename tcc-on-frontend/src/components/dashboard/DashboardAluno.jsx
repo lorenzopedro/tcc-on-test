@@ -12,7 +12,10 @@ function Dashboard() {
   });
   
   const [selectedFile, setSelectedFile] = useState(null);
+  const [tccTitle, setTccTitle] = useState('');
   const [uploadStatus, setUploadStatus] = useState('');
+  const [orientadores, setOrientadores] = useState([]);
+  const [selectedOrientador, setSelectedOrientador] = useState('');
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -23,6 +26,25 @@ function Dashboard() {
         notifications: storedUser.notifications || 0
       });
     }
+
+    const fetchOrientadores = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/orientadores', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setOrientadores(data.orientadores);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar orientadores:', error);
+      }
+    };
+
+    fetchOrientadores();
   }, []);
 
   const handleLogout = () => {
@@ -47,9 +69,20 @@ function Dashboard() {
       return;
     }
 
+    if (!tccTitle.trim()) {
+      setUploadStatus('Por favor, informe o título do TCC!');
+      return;
+    }
+
+    if (!selectedOrientador) {
+      setUploadStatus('Por favor, selecione um orientador!');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('tccFile', selectedFile);
-    formData.append('alunoId', JSON.parse(localStorage.getItem('user'))._id);
+    formData.append('titulo', tccTitle);
+    formData.append('orientadorId', selectedOrientador);
 
     try {
       setUploadStatus('Enviando arquivo...');
@@ -69,6 +102,8 @@ function Dashboard() {
           tccStatus: "Aguardando revisão"
         });
         setSelectedFile(null);
+        setTccTitle('');
+        setSelectedOrientador('');
       } else {
         const errorData = await response.json();
         setUploadStatus(`Erro: ${errorData.message}`);
@@ -92,6 +127,34 @@ function Dashboard() {
             <div className="file-upload-section">
               <h3>Enviar TCC</h3>
               <div className="upload-area">
+                <div className="form-group">
+                  <label htmlFor="tcc-title">Título do TCC</label>
+                  <input 
+                    type="text" 
+                    id="tcc-title"
+                    value={tccTitle}
+                    onChange={(e) => setTccTitle(e.target.value)}
+                    placeholder="Digite o título do trabalho"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="orientador-select">Orientador</label>
+                  <select
+                    id="orientador-select"
+                    value={selectedOrientador}
+                    onChange={(e) => setSelectedOrientador(e.target.value)}
+                    className="form-control"
+                  >
+                    <option value="">Selecione um orientador</option>
+                    {orientadores.map(orientador => (
+                      <option key={orientador._id} value={orientador._id}>
+                        {orientador.nomeCompleto}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
                 <input 
                   type="file" 
                   id="tcc-upload" 
@@ -104,12 +167,14 @@ function Dashboard() {
                 <button 
                   onClick={handleFileUpload} 
                   className="dashboard-button primary"
-                  disabled={!selectedFile}
+                  disabled={!selectedFile || !tccTitle || !selectedOrientador}
                 >
                   Enviar TCC
                 </button>
               </div>
-              {uploadStatus && <div className="upload-status">{uploadStatus}</div>}
+              {uploadStatus && <div className={`upload-status ${uploadStatus.includes('sucesso') ? 'success' : 'error'}`}>
+                {uploadStatus}
+              </div>}
             </div>
 
             <div className="tcc-info">
@@ -122,6 +187,8 @@ function Dashboard() {
             </div>
           </div>
         );
+      default:
+        return null;
     }
   };
 

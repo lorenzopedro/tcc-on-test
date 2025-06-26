@@ -11,6 +11,9 @@ function DashboardOrientador() {
     notifications: 0
   });
 
+  const [tccs, setTccs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser) {
@@ -23,61 +26,44 @@ function DashboardOrientador() {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchTccs = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/orientador/tccs', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setTccs(data.tccs);
+        } else {
+          console.error("Falha ao buscar TCCs");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar TCCs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTccs();
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     navigate('/login');
   };
 
-  const tccsParaOrientar = [
-    {
-      id: 1,
-      aluno: "João Silva",
-      matricula: "20230001",
-      titulo: "Sistema de Gestão Acadêmica",
-      status: "Aguardando correções",
-      ultimaSubmissao: "10/05/2025",
-      prazo: "13/05/2025",
-      etapa: "Capítulo 3"
-    },
-    {
-      id: 2,
-      aluno: "Maria Santos",
-      matricula: "20230025",
-      titulo: "Aplicativo para Controle Financeiro",
-      status: "Em andamento",
-      ultimaSubmissao: "11/05/2025",
-      prazo: "14/05/2025",
-      etapa: "Metodologia"
-    },
-    {
-      id: 3,
-      aluno: "Carlos Pereira",
-      matricula: "20230042",
-      titulo: "Análise de Dados Educacionais",
-      status: "Primeira versão",
-      ultimaSubmissao: "15/10/2023",
-      prazo: "01/11/2023",
-      etapa: "Resultados"
-    },
-    {
-      id: 4,
-      aluno: "Ana Carolina",
-      matricula: "20230018",
-      titulo: "Machine Learning para Diagnóstico Médico",
-      status: "Revisão final",
-      ultimaSubmissao: "05/05/2025",
-      prazo: "10/05/2025",
-      etapa: "Conclusão"
-    }
-  ];
-
   const handleAvaliarTCC = (id) => {
-    alert(`Abrindo avaliação do TCC ${id}`);
+    navigate(`/orientador/avaliar/${id}`);
   };
 
   const handleEnviarFeedback = (id) => {
-    alert(`Enviando feedback para o TCC ${id}`);
+    navigate(`/orientador/feedback/${id}`);
   };
 
   return (
@@ -122,50 +108,63 @@ function DashboardOrientador() {
             <div className="stats-container">
               <div className="stat-card">
                 <h3>Aguardando</h3>
-                <p className="stat-number">8</p>
+                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'pendente').length}</p>
               </div>
               <div className="stat-card">
                 <h3>Em Andamento</h3>
-                <p className="stat-number">3</p>
+                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'andamento').length}</p>
               </div>
               <div className="stat-card">
                 <h3>Concluídos</h3>
-                <p className="stat-number">2</p>
+                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'concluido').length}</p>
               </div>
             </div>
 
-            <div className="tcc-list-container">
-              <div className="tcc-list">
-                {tccsParaOrientar.map(tcc => (
-                  <div key={tcc.id} className="tcc-item">
-                    <div className="tcc-info">
-                      <h3>{tcc.titulo}</h3>
-                      <div className="tcc-details">
-                        <p><strong>Aluno:</strong> {tcc.aluno} ({tcc.matricula})</p>
-                        <p><strong>Etapa:</strong> {tcc.etapa}</p>
-                        <p><strong>Status:</strong> <span className={`status-${tcc.status.replace(/\s+/g, '-').toLowerCase()}`}>{tcc.status}</span></p>
-                        <p><strong>Última submissão:</strong> {tcc.ultimaSubmissao}</p>
-                        {tcc.prazo && <p><strong>Prazo:</strong> {tcc.prazo}</p>}
+            {loading ? (
+              <p>Carregando TCCs...</p>
+            ) : tccs.length === 0 ? (
+              <p>Não há TCCs para orientação no momento.</p>
+            ) : (
+              <div className="tcc-list-container">
+                <div className="tcc-list">
+                  {tccs.map(tcc => (
+                    <div key={tcc._id} className="tcc-item">
+                      <div className="tcc-info">
+                        <h3>{tcc.titulo}</h3>
+                        <div className="tcc-details">
+                          <p><strong>Aluno:</strong> {tcc.aluno_nome}</p>
+                          <p><strong>Matrícula:</strong> {tcc.matricula}</p>
+                          <p><strong>Status:</strong> <span className={`status-${tcc.status}`}>{tcc.status}</span></p>
+                          <p><strong>Última submissão:</strong> {new Date(tcc.data_envio).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="tcc-actions">
+                        <a 
+                          href={`http://localhost:5000${tcc.arquivo_url}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="dashboard-button primary"
+                        >
+                          Ver PDF
+                        </a>
+                        <button 
+                          className="dashboard-button primary"
+                          onClick={() => handleAvaliarTCC(tcc._id)}
+                        >
+                          Avaliar
+                        </button>
+                        <button 
+                          className="dashboard-button secondary"
+                          onClick={() => handleEnviarFeedback(tcc._id)}
+                        >
+                          Enviar Feedback
+                        </button>
                       </div>
                     </div>
-                    <div className="tcc-actions">
-                      <button 
-                        className="dashboard-button primary"
-                        onClick={() => handleAvaliarTCC(tcc.id)}
-                      >
-                        Avaliar
-                      </button>
-                      <button 
-                        className="dashboard-button secondary"
-                        onClick={() => handleEnviarFeedback(tcc.id)}
-                      >
-                        Enviar Feedback
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </section>
         </div>
       </main>
