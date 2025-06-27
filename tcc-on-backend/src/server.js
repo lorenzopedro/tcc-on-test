@@ -45,7 +45,9 @@ const tccSchema = new mongoose.Schema({
   arquivo_url: { type: String, required: true },
   data_envio: { type: Date, default: Date.now },
   status: { type: String, enum: ['pendente', 'andamento', 'concluido'], default: 'pendente' },
-  feedback: { type: String, default: '' }
+  feedback: { type: String, default: '' },
+  feedback_text: { type: String, default: '' },
+  arquivo_corrigido_url: { type: String, default: '' }
 });
 
 const TCC = mongoose.model('TCC', tccSchema);
@@ -328,6 +330,73 @@ app.get('/orientador/tccs', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar TCCs:', error);
     res.status(500).json({ success: false, message: 'Erro ao buscar TCCs' });
+  }
+});
+
+app.post('/tcc/:id/feedback', authMiddleware, upload.single('correctionFile'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { feedback } = req.body;
+
+    if (req.user.tipo !== 'orientador') {
+      return res.status(403).json({ success: false, message: 'Apenas orientadores podem enviar feedback' });
+    }
+
+    const tcc = await TCC.findById(id);
+    if (!tcc) {
+      return res.status(404).json({ success: false, message: 'TCC não encontrado' });
+    }
+
+    if (tcc.orientadorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Você não é o orientador deste TCC' });
+    }
+
+    tcc.feedback_text = feedback;
+    
+    if (req.file) {
+      tcc.arquivo_corrigido_url = `/uploads/${req.file.filename}`;
+    }
+
+    tcc.status = 'andamento';
+
+    await tcc.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Feedback enviado com sucesso',
+      tcc
+    });
+  } catch (error) {
+    console.error('Erro ao enviar feedback:', error);
+    res.status(500).json({ success: false, message: 'Erro ao enviar feedback' });
+  }
+});
+
+app.get('/aluno/feedback', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.tipo !== 'aluno') {
+      return res.status(403).json({ success: false, message: 'Acesso não autorizado' });
+    }
+
+    const tcc = await TCC.findOne({ alunoId: req.user._id })
+      .populate('orientadorId', 'nomeCompleto')
+      .sort({ data_envio: -1 });
+
+    if (!tcc) {
+      return res.json({ success: true, feedback: null });
+    }
+
+    res.json({ 
+      success: true, 
+      feedback: {
+        text: tcc.feedback_text,
+        correctedFile: tcc.arquivo_corrigido_url,
+        lastUpdate: tcc.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar feedback:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar feedback' });
   }
 });
 

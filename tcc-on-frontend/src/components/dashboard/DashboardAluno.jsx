@@ -16,6 +16,9 @@ function Dashboard() {
   const [uploadStatus, setUploadStatus] = useState('');
   const [orientadores, setOrientadores] = useState([]);
   const [selectedOrientador, setSelectedOrientador] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [correctedFileUrl, setCorrectedFileUrl] = useState('');
+  const [feedbackDate, setFeedbackDate] = useState('');
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -44,7 +47,31 @@ function Dashboard() {
       }
     };
 
+    const fetchFeedback = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/aluno/feedback', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.feedback) {
+            setFeedback(data.feedback.text || '');
+            setCorrectedFileUrl(data.feedback.correctedFile || '');
+            if (data.feedback.lastUpdate) {
+              setFeedbackDate(new Date(data.feedback.lastUpdate).toLocaleDateString());
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar feedback:', error);
+      }
+    };
+
     fetchOrientadores();
+    fetchFeedback();
   }, []);
 
   const handleLogout = () => {
@@ -128,7 +155,7 @@ function Dashboard() {
               <h3>Enviar TCC</h3>
               <div className="upload-area">
                 <div className="form-group">
-                  <label htmlFor="tcc-title">Título do TCC</label>
+                  <label htmlFor="tcc-title">Observação</label>
                   <input 
                     type="text" 
                     id="tcc-title"
@@ -179,11 +206,25 @@ function Dashboard() {
 
             <div className="tcc-info">
               <h3>Orientações Recentes</h3>
-              <p><strong>Seu orientador solicitou as seguintes alterações:</strong></p>
-              <ul>
-                <li>Revisar capítulo 3</li>
-                <li>Incluir mais referências bibliográficas</li>
-              </ul>
+              {feedback ? (
+                <>
+                  <p><strong>Feedback do orientador:</strong> (Atualizado em: {feedbackDate})</p>
+                  <p>{feedback}</p>
+                  {correctedFileUrl && (
+                    <p>
+                      <a 
+                        href={`http://localhost:5000${correctedFileUrl}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        Baixar PDF com correções
+                      </a>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>Não há feedback disponível no momento.</p>
+              )}
             </div>
           </div>
         );

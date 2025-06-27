@@ -396,3 +396,255 @@ h3 {
     width: 100%;
   }
 }
+
+.feedback-modal-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.feedback-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  z-index: 2010;
+}
+
+.feedback-modal-card {
+  position: relative;
+  z-index: 2020;
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transform: translateY(20px);
+  opacity: 0;
+  animation: modalFadeIn 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalFadeIn {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.feedback-modal-header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f0f2f5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.feedback-modal-header h2 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin: 0;
+  font-weight: 600;
+  border: none;
+  padding: 0;
+}
+
+.feedback-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #7f8c8d;
+}
+
+.feedback-modal-close:hover {
+  background: #f5f7fa;
+  color: #e74c3c;
+  transform: rotate(90deg);
+}
+
+.feedback-modal-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.feedback-modal-body {
+  padding: 24px;
+}
+
+.feedback-form-group {
+  margin-bottom: 24px;
+}
+
+.feedback-form-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.feedback-textarea-container {
+  position: relative;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.feedback-textarea-container:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.feedback-textarea {
+  width: 100%;
+  height: 180px;
+  padding: 16px;
+  border: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 1rem;
+  color: #2c3e50;
+  outline: none;
+  background: #fafbfc;
+}
+
+.textarea-counter {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  font-size: 0.8rem;
+  color: #95a5a6;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.file-upload-container {
+  position: relative;
+}
+
+.file-input {
+  position: absolute;
+  left: -9999px;
+}
+
+.file-input-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #f8f9fa;
+  border: 2px dashed #e1e4e8;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-input-label:hover {
+  background: #edf2f7;
+  border-color: #3498db;
+}
+
+.file-input-label svg {
+  flex-shrink: 0;
+  color: #3498db;
+}
+
+.file-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #7f8c8d;
+}
+
+.feedback-status {
+  padding: 14px;
+  border-radius: 10px;
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 500;
+  animation: statusFadeIn 0.3s ease;
+}
+
+@keyframes statusFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.feedback-status.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.feedback-status.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.feedback-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  background: #f8f9fa;
+  border-top: 1px solid #e1e4e8;
+  gap: 15px;
+}
+
+.feedback-modal-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-modal-button.cancel {
+  background: transparent;
+  color: #7f8c8d;
+}
+
+.feedback-modal-button.cancel:hover {
+  background: #f0f2f5;
+  color: #2c3e50;
+}
+
+.feedback-modal-button.submit {
+  background: #3498db;
+  color: white;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.25);
+}
+
+.feedback-modal-button.submit:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(52, 152, 219, 0.35);
+}
+
+.feedback-modal-button.submit svg {
+  width: 16px;
+  height: 16px;
+}

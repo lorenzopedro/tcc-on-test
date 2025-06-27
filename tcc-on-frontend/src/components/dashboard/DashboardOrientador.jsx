@@ -13,6 +13,11 @@ function DashboardOrientador() {
 
   const [tccs, setTccs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [currentTccId, setCurrentTccId] = useState(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [correctionFile, setCorrectionFile] = useState(null);
+  const [feedbackStatus, setFeedbackStatus] = useState('');
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -62,12 +67,144 @@ function DashboardOrientador() {
     navigate(`/orientador/avaliar/${id}`);
   };
 
-  const handleEnviarFeedback = (id) => {
-    navigate(`/orientador/feedback/${id}`);
+  const handleOpenFeedbackModal = (id) => {
+    setCurrentTccId(id);
+    setShowFeedbackModal(true);
+  };
+
+  const handleCloseFeedbackModal = () => {
+    setShowFeedbackModal(false);
+    setFeedbackText('');
+    setCorrectionFile(null);
+    setFeedbackStatus('');
+  };
+
+  const handleFileChange = (e) => {
+    setCorrectionFile(e.target.files[0]);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackText) {
+      setFeedbackStatus('Por favor, escreva o feedback.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('feedback', feedbackText);
+    if (correctionFile) {
+      formData.append('correctionFile', correctionFile);
+    }
+
+    try {
+      setFeedbackStatus('Enviando...');
+      const response = await fetch(`http://localhost:5000/tcc/${currentTccId}/feedback`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        setFeedbackStatus('Feedback enviado com sucesso!');
+        const updatedTccs = tccs.map(tcc => {
+          if (tcc._id === currentTccId) {
+            return { ...tcc, status: 'andamento' };
+          }
+          return tcc;
+        });
+        setTccs(updatedTccs);
+        setTimeout(() => {
+          handleCloseFeedbackModal();
+        }, 1500);
+      } else {
+        const errorData = await response.json();
+        setFeedbackStatus(`Erro: ${errorData.message}`);
+      }
+    } catch (error) {
+      setFeedbackStatus('Erro ao conectar com o servidor');
+    }
   };
 
   return (
     <div className="orientador-container">
+      {/* Novo Modal de Feedback - Design Moderno */}
+      {showFeedbackModal && (
+        <div className="feedback-modal-container">
+          <div className="feedback-modal-overlay" onClick={handleCloseFeedbackModal}></div>
+          
+          <div className="feedback-modal-card">
+            <div className="feedback-modal-header">
+              <h2>Enviar Feedback</h2>
+              <button className="feedback-modal-close" onClick={handleCloseFeedbackModal}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="feedback-modal-body">
+              <div className="feedback-form-group">
+                <label>Comentários:</label>
+                <div className="feedback-textarea-container">
+                  <textarea
+                    placeholder="Digite seu feedback aqui..."
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    className="feedback-textarea"
+                    maxLength="500"
+                  />
+                  <div className="textarea-counter">{feedbackText.length}/500</div>
+                </div>
+              </div>
+              
+              <div className="feedback-form-group">
+                <label>Anexar PDF corrigido (opcional):</label>
+                <div className="file-upload-container">
+                  <input 
+                    type="file" 
+                    id="correction-file"
+                    onChange={handleFileChange}
+                    accept=".pdf"
+                    className="file-input"
+                  />
+                  <label htmlFor="correction-file" className="file-input-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span className="file-text">
+                      {correctionFile ? correctionFile.name : "Selecionar arquivo"}
+                    </span>
+                  </label>
+                </div>
+              </div>
+              
+              {feedbackStatus && (
+                <div className={`feedback-status ${feedbackStatus.includes('sucesso') ? 'success' : 'error'}`}>
+                  {feedbackStatus}
+                </div>
+              )}
+            </div>
+            
+            <div className="feedback-modal-footer">
+              <button onClick={handleCloseFeedbackModal} className="feedback-modal-button cancel">
+                Cancelar
+              </button>
+              <button onClick={handleSubmitFeedback} className="feedback-modal-button submit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13"></path>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                Enviar Feedback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="orientador-header">
         <div className="logo-container">
           <h1>TCC ON</h1>
@@ -155,7 +292,7 @@ function DashboardOrientador() {
                         </button>
                         <button 
                           className="dashboard-button secondary"
-                          onClick={() => handleEnviarFeedback(tcc._id)}
+                          onClick={() => handleOpenFeedbackModal(tcc._id)}
                         >
                           Enviar Feedback
                         </button>
