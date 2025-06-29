@@ -6,6 +6,7 @@ import CadastroOrientador from "./components/cadastro/cadastroOrientador";
 import CadastroCoordenador from "./components/cadastro/cadastroCoordenador";
 import CadastroSupervisor from "./components/cadastro/cadastroSupervisor";
 import EsqueciSenha from "./components/cadastro/EsqueciSenha"; 
+import RedefinirSenha from "./components/cadastro/RedefinirSenha";  
 import DashboardAluno from "./components/dashboard/DashboardAluno";
 import DashboardOrientador from "./components/dashboard/DashboardOrientador";
 import DashboardCoordenador from './components/dashboard/DashboardCoordenador';
@@ -24,6 +25,7 @@ function App() {
         <Route path="/cadastro/coordenador" element={<CadastroCoordenador />} />
         <Route path="/cadastro/supervisor" element={<CadastroSupervisor />} />
         <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+        <Route path="/redefinir-senha/:token" element={<RedefinirSenha />} />
         <Route path="/dashboard-aluno" element={<DashboardAluno />} />
         <Route path="/dashboard-orientador" element={<DashboardOrientador />} />
         <Route path="/dashboard-coordenador" element={<DashboardCoordenador />} />
