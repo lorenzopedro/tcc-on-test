@@ -195,6 +195,42 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/esqueci-senha', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Por segurança, não informe se o e-mail existe ou não
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Se um usuário com este e-mail existir, um link de recuperação será enviado.' 
+      });
+    }
+
+    // --- Lógica de Envio de E-mail (Simulação) ---
+    // Em uma aplicação real, você geraria um token seguro, o salvaria no banco de dados com uma data de expiração
+    // e enviaria um e-mail para o usuário com um link contendo esse token.
+    // Ex: const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    //     await sendPasswordResetEmail(user.email, token);
+
+    console.log(`[SIMULAÇÃO] Enviando e-mail de recuperação para: ${user.email}`);
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'Se um usuário com este e-mail existir, um link de recuperação foi enviado.' 
+    });
+
+  } catch (error) {
+    console.error('Erro no processo de esqueci a senha:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erro no servidor. Tente novamente mais tarde.' 
+    });
+  }
+});
+
 const handleCadastro = async (req, res, tipo, schema) => {
   try {
     const { error } = schema.validate(req.body);

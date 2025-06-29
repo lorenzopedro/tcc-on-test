@@ -89,6 +89,12 @@ const Login = () => {
           >
             Não possui cadastro? <span style={styles.link}>Cadastre-se</span>
           </p>
+          <p
+            style={styles.loginLink}
+            onClick={() => navigate('/esqueci-senha')}
+          >
+            <span style={styles.link}>Esqueci minha senha</span>
+          </p>
         </form>
       </div>
     </div>
