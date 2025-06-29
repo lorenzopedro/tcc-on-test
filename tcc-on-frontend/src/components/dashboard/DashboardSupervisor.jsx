@@ -11,6 +11,15 @@ function DashboardSupervisor() {
     notifications: 0
   });
 
+  const [tccsAprovados, setTccsAprovados] = useState([]);
+  const [professores, setProfessores] = useState([]);
+  const [showAgendarModal, setShowAgendarModal] = useState(false);
+  const [currentTcc, setCurrentTcc] = useState(null);
+  const [dataApresentacao, setDataApresentacao] = useState('');
+  const [local, setLocal] = useState('');
+  const [banca, setBanca] = useState([{ professorId: '', papel: 'Avaliador' }]);
+  const [status, setStatus] = useState('');
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser) {
@@ -23,113 +32,265 @@ function DashboardSupervisor() {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchTccsAprovados = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/supervisor/tccs-aprovados', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setTccsAprovados(data.tccs);
+        } else {
+          console.error("Falha ao buscar TCCs aprovados");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar TCCs aprovados:", error);
+      }
+    };
+
+    const fetchProfessores = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/professores', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setProfessores(data.professores);
+        } else {
+          console.error("Falha ao buscar professores");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar professores:", error);
+      }
+    };
+
+    fetchTccsAprovados();
+    fetchProfessores();
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     navigate('/login');
   };
 
-  const [bancas, setBancas] = useState([
-    {
-      id: 1,
-      titulo: "Sistema de Gestão Acadêmica",
-      aluno: "João Silva",
-      orientador: "Prof. Eder Santana",
-      data: "20/05/2025",
-      horario: "14:00",
-      local: "Sala 301 Bloco G",
-      participantes: [
-        { id: 1, nome: "Prof. Rafael Marinho", papel: "Avaliador" },
-        { id: 2, nome: "Prof. Juliana Lilis", papel: "Avaliador" }
-      ]
-    },
-    {
-      id: 2,
-      titulo: "Aplicativo para Controle Financeiro",
-      aluno: "Maria Santos",
-      orientador: "Prof. Rafael Marinho",
-      data: "22/05/2025",
-      horario: "10:30",
-      local: "Sala 304 Bloco H",
-      participantes: [
-        { id: 1, nome: "Prof. Henaldo Barros", papel: "Avaliador" },
-        { id: 2, nome: "Prof. Eder Santana", papel: "Avaliador" }
-      ]
-    },
-    {
-      id: 3,
-      titulo: "IA para Diagnóstico Médico",
-      aluno: "Enzo Fernandes",
-      orientador: "Prof. Juliana Lilis",
-      data: "25/05/2025",
-      horario: "16:00",
-      local: "Sala 402 Bloco N",
-      participantes: [
-        { id: 1, nome: "Prof. Carlos Mendes", papel: "Presidente" }
-      ]
-    }
-  ]);
-
-  const professoresDisponiveis = [
-    { id: 1, nome: "Prof. Rafael Marinho" },
-    { id: 2, nome: "Prof. Juliana Lilis" },
-    { id: 3, nome: "Prof. Henaldo Barros" },
-    { id: 4, nome: "Prof. Eder Santana" },
-    { id: 5, nome: "Prof. Carlos Mendes" },
-    { id: 6, nome: "Prof. Ana Paula Costa" }
-  ];
-
-  const papeis = [
-    { id: 1, nome: "Avaliador Interno" },
-    { id: 2, nome: "Avaliador Externo" }
-  ];
-
-  const handleRemoverParticipante = (bancaId, participanteId) => {
-    const updatedBancas = bancas.map(banca => {
-      if (banca.id === bancaId) {
-        return {
-          ...banca,
-          participantes: banca.participantes.filter(p => p.id !== participanteId)
-        };
-      }
-      return banca;
-    });
-    setBancas(updatedBancas);
-    alert(`Participante removido da banca ${bancaId}`);
+  const handleOpenAgendarModal = (tcc) => {
+    setCurrentTcc(tcc);
+    const orientador = {
+      professorId: tcc.orientadorId._id,
+      papel: 'Orientador'
+    };
+    setBanca([orientador, { professorId: '', papel: 'Avaliador' }]);
+    setShowAgendarModal(true);
   };
 
-  const handleAdicionarParticipante = (bancaId, professorId, papelId) => {
-    const professor = professoresDisponiveis.find(p => p.id === professorId);
-    const papel = papeis.find(p => p.id === papelId);
-    
-    if (!professor || !papel) return;
+  const handleCloseAgendarModal = () => {
+    setShowAgendarModal(false);
+    setDataApresentacao('');
+    setLocal('');
+    setBanca([{ professorId: '', papel: 'Avaliador' }]);
+    setStatus('');
+  };
 
-    const updatedBancas = bancas.map(banca => {
-      if (banca.id === bancaId) {
-        if (banca.participantes.some(p => p.id === professor.id)) {
-          alert("Este professor já está na banca!");
-          return banca;
-        }
-        
-        return {
-          ...banca,
-          participantes: [
-            ...banca.participantes, 
-            {
-              ...professor,
-              papel: papel.nome
+  const handleAddMembroBanca = () => {
+    setBanca([...banca, { professorId: '', papel: 'Avaliador' }]);
+  };
+
+  const handleRemoveMembroBanca = (index) => {
+    if (index === 0) return;
+    const newBanca = [...banca];
+    newBanca.splice(index, 1);
+    setBanca(newBanca);
+  };
+
+  const handleBancaChange = (index, field, value) => {
+    const newBanca = [...banca];
+    newBanca[index][field] = value;
+    setBanca(newBanca);
+  };
+
+  const handleAgendarApresentacao = async () => {
+    if (!dataApresentacao || !local || banca.some((membro, index) => index > 0 && (!membro.professorId || !membro.papel))) {
+      setStatus('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    try {
+      setStatus('Agendando...');
+      const response = await fetch(`http://localhost:5000/tcc/${currentTcc._id}/agendar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          data_apresentacao: dataApresentacao,
+          local_apresentacao: local,
+          banca: banca
+        })
+      });
+
+      if (response.ok) {
+        setStatus('Apresentação agendada com sucesso!');
+        setTimeout(() => {
+          handleCloseAgendarModal();
+          const fetchTccs = async () => {
+            const res = await fetch('http://localhost:5000/supervisor/tccs-aprovados', {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              setTccsAprovados(data.tccs);
             }
-          ]
-        };
+          };
+          fetchTccs();
+        }, 1500);
+      } else {
+        const errorData = await response.json();
+        setStatus(`Erro: ${errorData.message}`);
       }
-      return banca;
-    });
-    setBancas(updatedBancas);
-    alert(`Professor ${professor.nome} adicionado como ${papel.nome} à banca ${bancaId}`);
+    } catch (error) {
+      setStatus('Erro ao conectar com o servidor');
+    }
   };
 
   return (
     <div className="supervisor-container">
+      {showAgendarModal && (
+        <div className="agendar-modal-container">
+          <div className="agendar-modal-overlay" onClick={handleCloseAgendarModal}></div>
+          
+          <div className="agendar-modal-card">
+            <div className="agendar-modal-header">
+              <h2>Agendar Apresentação</h2>
+              <button className="agendar-modal-close" onClick={handleCloseAgendarModal}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="agendar-modal-body">
+              <div className="agendar-form-group">
+                <label>Título do TCC</label>
+                <input 
+                  type="text" 
+                  value={currentTcc?.titulo || ''} 
+                  disabled 
+                  className="agendar-form-input"
+                />
+              </div>
+              
+              <div className="agendar-form-group">
+                <label>Aluno</label>
+                <input 
+                  type="text" 
+                  value={currentTcc?.alunoId?.nomeCompleto || ''} 
+                  disabled 
+                  className="agendar-form-input"
+                />
+              </div>
+              
+              <div className="agendar-form-group">
+                <label>Data da Apresentação*</label>
+                <input 
+                  type="datetime-local" 
+                  value={dataApresentacao} 
+                  onChange={(e) => setDataApresentacao(e.target.value)} 
+                  className="agendar-form-input"
+                />
+              </div>
+              
+              <div className="agendar-form-group">
+                <label>Local*</label>
+                <input 
+                  type="text" 
+                  placeholder="Sala, bloco, etc." 
+                  value={local} 
+                  onChange={(e) => setLocal(e.target.value)} 
+                  className="agendar-form-input"
+                />
+              </div>
+              
+              <div className="agendar-form-group">
+                <label>Composição da Banca*</label>
+                {banca.map((membro, index) => (
+                  <div key={index} className="banca-member">
+                    <select
+                      value={membro.professorId}
+                      onChange={(e) => handleBancaChange(index, 'professorId', e.target.value)}
+                      className="agendar-form-select"
+                      disabled={index === 0}
+                    >
+                      <option value="">Selecione um professor</option>
+                      {professores.map(prof => (
+                        <option key={prof._id} value={prof._id}>
+                          {prof.nomeCompleto}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    <select
+                      value={membro.papel}
+                      onChange={(e) => handleBancaChange(index, 'papel', e.target.value)}
+                      className="agendar-form-select"
+                      disabled={index === 0}
+                    >
+                      <option value="Avaliador">Avaliador</option>
+                      <option value="Presidente">Presidente</option>
+                      <option value="Membro">Membro</option>
+                      {index === 0 && <option value="Orientador">Orientador</option>}
+                    </select>
+                    
+                    {index > 0 && (
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveMembroBanca(index)}
+                        className="remove-button"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button 
+                  type="button" 
+                  onClick={handleAddMembroBanca}
+                  className="add-button"
+                >
+                  Adicionar Membro
+                </button>
+              </div>
+              
+              {status && (
+                <div className={`agendar-status ${status.includes('sucesso') ? 'success' : 'error'}`}>
+                  {status}
+                </div>
+              )}
+            </div>
+            
+            <div className="agendar-modal-footer">
+              <button onClick={handleCloseAgendarModal} className="agendar-modal-button cancel">
+                Cancelar
+              </button>
+              <button onClick={handleAgendarApresentacao} className="agendar-modal-button submit">
+                Agendar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="supervisor-header">
         <div className="logo-container">
           <h1>TCC ON</h1>
@@ -164,109 +325,45 @@ function DashboardSupervisor() {
       <main className="supervisor-main">
         <div className="supervisor-dashboard">
           <section className="dashboard-section">
-            <h2>Gerenciamento de Bancas de TCC</h2>
+            <h2>TCCs Aprovados para Bancas</h2>
             
-            <div className="stats-container">
-              <div className="stat-card">
-                <h3>Bancas Agendadas</h3>
-                <p className="stat-number">{bancas.length}</p>
-              </div>
-              <div className="stat-card">
-                <h3>Total de Participantes</h3>
-                <p className="stat-number">
-                  {bancas.reduce((total, banca) => total + banca.participantes.length, 0)}
-                </p>
-              </div>
-              <div className="stat-card">
-                <h3>Professores</h3>
-                <p className="stat-number">{professoresDisponiveis.length}</p>
-              </div>
-            </div>
-
-            <div className="bancas-list-container">
-              <div className="bancas-list">
-                {bancas.map(banca => (
-                  <div key={banca.id} className="banca-item">
-                    <div className="banca-header">
-                      <h3>{banca.titulo}</h3>
-                      <div className="banca-meta">
-                        <span><strong>Aluno:</strong> {banca.aluno}</span>
-                        <span><strong>Orientador:</strong> {banca.orientador}</span>
-                        <span><strong>Data:</strong> {banca.data} às {banca.horario}</span>
-                        <span><strong>Local:</strong> {banca.local}</span>
+            {tccsAprovados.length === 0 ? (
+              <p>Não há TCCs aprovados no momento.</p>
+            ) : (
+              <div className="tcc-list-container">
+                <div className="tcc-list">
+                  {tccsAprovados.map(tcc => (
+                    <div key={tcc._id} className="tcc-item">
+                      <div className="tcc-info">
+                        <h3>{tcc.titulo}</h3>
+                        <div className="tcc-details">
+                          <p><strong>Aluno:</strong> {tcc.alunoId.nomeCompleto}</p>
+                          <p><strong>Matrícula:</strong> {tcc.alunoId.matricula}</p>
+                          <p><strong>Orientador:</strong> {tcc.orientadorId.nomeCompleto}</p>
+                          <p><strong>Data de Envio:</strong> {new Date(tcc.data_envio).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="composicao-banca">
-                      <h4>Composição da Banca:</h4>
-                      <ul className="membros-banca">
-                        <li className="membro-item orientador">
-                          <span>{banca.orientador}</span>
-                          <span className="papel">Orientador</span>
-                        </li>
-                        {banca.participantes.map(participante => (
-                          <li key={participante.id} className="membro-item">
-                            <span>{participante.nome}</span>
-                            <span className="papel">{participante.papel}</span>
-                            <button 
-                              className="remove-button"
-                              onClick={() => handleRemoverParticipante(banca.id, participante.id)}
-                            >
-                              Remover
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                      
-                    <div className="adicionar-membro">
-                      <h4>Adicionar Membro à Banca:</h4>
-                      <div className="add-participante-form">
-                        <select className="professor-select">
-                          <option value="">Selecione um professor...</option>
-                          {professoresDisponiveis.map(professor => (
-                            <option key={professor.id} value={professor.id}>
-                              {professor.nome}
-                            </option>
-                          ))}
-                        </select>
-                        
-                        <select className="papel-select">
-                          <option value="">Selecione o papel...</option>
-                          {papeis.map(papel => (
-                            <option key={papel.id} value={papel.id}>
-                              {papel.nome}
-                            </option>
-                          ))}
-                        </select>
-                        
-                        <button 
+                      <div className="tcc-actions">
+                        <a 
+                          href={`http://localhost:5000${tcc.arquivo_url}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
                           className="dashboard-button primary"
-                          onClick={() => {
-                            const professorSelect = document.querySelector(`.banca-item:nth-child(${banca.id}) .professor-select`);
-                            const papelSelect = document.querySelector(`.banca-item:nth-child(${banca.id}) .papel-select`);
-                            
-                            if (professorSelect.value && papelSelect.value) {
-                              handleAdicionarParticipante(
-                                banca.id, 
-                                parseInt(professorSelect.value),
-                                parseInt(papelSelect.value)
-                              );
-                              professorSelect.value = "";
-                              papelSelect.value = "";
-                            } else {
-                              alert("Selecione um professor e um papel");
-                            }
-                          }}
                         >
-                          Adicionar à Banca
+                          Ver TCC
+                        </a>
+                        <button 
+                          className="dashboard-button success"
+                          onClick={() => handleOpenAgendarModal(tcc)}
+                        >
+                          Agendar Banca
                         </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </section>
         </div>
       </main>

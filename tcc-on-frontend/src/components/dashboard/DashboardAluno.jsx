@@ -61,7 +61,11 @@ function Dashboard() {
             setFeedback(data.feedback.text || '');
             setCorrectedFileUrl(data.feedback.correctedFile || '');
             if (data.feedback.lastUpdate) {
-              setFeedbackDate(new Date(data.feedback.lastUpdate).toLocaleDateString());
+              const date = new Date(data.feedback.lastUpdate);
+              setFeedbackDate(
+                date.toLocaleDateString('pt-BR') + ' ' + 
+                date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
+              );
             }
           }
         }

@@ -18,6 +18,8 @@ function DashboardOrientador() {
   const [feedbackText, setFeedbackText] = useState('');
   const [correctionFile, setCorrectionFile] = useState(null);
   const [feedbackStatus, setFeedbackStatus] = useState('');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [tccToApprove, setTccToApprove] = useState(null);
 
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -61,10 +63,6 @@ function DashboardOrientador() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     navigate('/login');
-  };
-
-  const handleAvaliarTCC = (id) => {
-    navigate(`/orientador/avaliar/${id}`);
   };
 
   const handleOpenFeedbackModal = (id) => {
@@ -126,9 +124,50 @@ function DashboardOrientador() {
     }
   };
 
+  const handleOpenConfirmModal = (tcc) => {
+    setTccToApprove(tcc);
+    setShowConfirmModal(true);
+  };
+
+  const handleCloseConfirmModal = () => {
+    setShowConfirmModal(false);
+    setTccToApprove(null);
+  };
+
+  const handleAprovarTCC = async () => {
+    if (!tccToApprove) return;
+    
+    try {
+      const response = await fetch(`http://localhost:5000/tcc/${tccToApprove._id}/aprovar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const updatedTccs = tccs.map(tcc => {
+          if (tcc._id === tccToApprove._id) {
+            return { ...tcc, status: 'aprovado' };
+          }
+          return tcc;
+        });
+        setTccs(updatedTccs);
+        setFeedbackStatus('TCC aprovado com sucesso!');
+        setTimeout(() => setFeedbackStatus(''), 3000);
+        handleCloseConfirmModal();
+      } else {
+        const errorData = await response.json();
+        setFeedbackStatus(`Erro: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Erro ao aprovar TCC:', error);
+      setFeedbackStatus('Erro ao conectar com o servidor');
+    }
+  };
+
   return (
     <div className="orientador-container">
-      {/* Novo Modal de Feedback - Design Moderno */}
       {showFeedbackModal && (
         <div className="feedback-modal-container">
           <div className="feedback-modal-overlay" onClick={handleCloseFeedbackModal}></div>
@@ -183,7 +222,7 @@ function DashboardOrientador() {
               </div>
               
               {feedbackStatus && (
-                <div className={`feedback-status ${feedbackStatus.includes('sucesso') ? 'success' : 'error'}`}>
+                <div className={`feedback-status ${feedbackStatus.includes('sucesso') || feedbackStatus.includes('aprovado') ? 'success' : 'error'}`}>
                   {feedbackStatus}
                 </div>
               )}
@@ -199,6 +238,38 @@ function DashboardOrientador() {
                   <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
                 Enviar Feedback
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConfirmModal && (
+        <div className="feedback-modal-container">
+          <div className="feedback-modal-overlay" onClick={handleCloseConfirmModal}></div>
+          
+          <div className="feedback-modal-card">
+            <div className="feedback-modal-header">
+              <h2>Confirmar Aprovação</h2>
+              <button className="feedback-modal-close" onClick={handleCloseConfirmModal}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="feedback-modal-body">
+              <p>Tem certeza que deseja aprovar o TCC <strong>"{tccToApprove?.titulo}"</strong> do aluno <strong>{tccToApprove?.aluno_nome}</strong>?</p>
+              <p>Esta ação não pode ser desfeita.</p>
+            </div>
+            
+            <div className="feedback-modal-footer">
+              <button onClick={handleCloseConfirmModal} className="feedback-modal-button cancel">
+                Cancelar
+              </button>
+              <button onClick={handleAprovarTCC} className="feedback-modal-button submit">
+                Confirmar Aprovação
               </button>
             </div>
           </div>
@@ -252,10 +323,16 @@ function DashboardOrientador() {
                 <p className="stat-number">{tccs.filter(tcc => tcc.status === 'andamento').length}</p>
               </div>
               <div className="stat-card">
-                <h3>Concluídos</h3>
-                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'concluido').length}</p>
+                <h3>Aprovados</h3>
+                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'aprovado').length}</p>
               </div>
             </div>
+
+            {feedbackStatus && !showFeedbackModal && (
+              <div className={`feedback-status ${feedbackStatus.includes('sucesso') || feedbackStatus.includes('aprovado') ? 'success' : 'error'}`}>
+                {feedbackStatus}
+              </div>
+            )}
 
             {loading ? (
               <p>Carregando TCCs...</p>
@@ -284,18 +361,22 @@ function DashboardOrientador() {
                         >
                           Ver PDF
                         </a>
-                        <button 
-                          className="dashboard-button primary"
-                          onClick={() => handleAvaliarTCC(tcc._id)}
-                        >
-                          Avaliar
-                        </button>
-                        <button 
-                          className="dashboard-button secondary"
-                          onClick={() => handleOpenFeedbackModal(tcc._id)}
-                        >
-                          Enviar Feedback
-                        </button>
+                        {tcc.status === 'andamento' && (
+                          <button 
+                            className="dashboard-button success"
+                            onClick={() => handleOpenConfirmModal(tcc)}
+                          >
+                            Aprovar TCC
+                          </button>
+                        )}
+                        {tcc.status !== 'aprovado' && (
+                          <button 
+                            className="dashboard-button secondary"
+                            onClick={() => handleOpenFeedbackModal(tcc._id)}
+                          >
+                            Enviar Feedback
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

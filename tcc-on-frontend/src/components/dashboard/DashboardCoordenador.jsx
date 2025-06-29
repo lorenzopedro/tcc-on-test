@@ -11,6 +11,9 @@ function DashboardCoordenador() {
     notifications: 0
   });
 
+  const [bancasAgendadas, setBancasAgendadas] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser) {
@@ -21,6 +24,30 @@ function DashboardCoordenador() {
         notifications: storedUser.notifications || 0
       });
     }
+
+    const fetchBancasAgendadas = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/coordenador/bancas-agendadas', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setBancasAgendadas(data.bancas);
+        } else {
+          console.error("Falha ao buscar bancas agendadas");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar bancas agendadas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBancasAgendadas();
   }, []);
 
   const handleLogout = () => {
@@ -29,78 +56,60 @@ function DashboardCoordenador() {
     navigate('/login');
   };
 
-  const tccsParaAprovar = [
-    {
-      id: 1,
-      aluno: "João Silva",
-      orientador: "Prof. Eder Santana",
-      titulo: "Sistema de Gestão Acadêmica",
-      status: "Aguardando aprovação",
-      dataSubmissao: "10/05/2025"
-    },
-    {
-      id: 2,
-      aluno: "Maria Santos",
-      orientador: "Prof. Rafael Marinho",
-      titulo: "Aplicativo para Controle Financeiro",
-      status: "Aguardando aprovação",
-      dataSubmissao: "11/05/2025"
-    },
-    {
-      id: 3,
-      aluno: "Enzo Fernandes",
-      orientador: "Prof. Juliana Lilis",
-      titulo: "IA para Diagnóstico Médico",
-      status: "Aguardando aprovação",
-      dataSubmissao: "12/05/2025"
-    },
-    {
-      id: 4,
-      aluno: "Ana Costa",
-      orientador: "Prof. Henaldo Barros",
-      titulo: "Blockchain para Votação Digital",
-      status: "Aguardando aprovação",
-      dataSubmissao: "13/05/2025"
-    }
-  ];
+  const handleAprovarBanca = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/banca/${id}/aprovar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
 
-  const orientadores = [
-    {
-      id: 1,
-      nome: "Prof. Eder Santana",
-      qtdOrientandos: 5,
-      departamento: "Computação",
-      capacidade: 8
-    },
-    {
-      id: 2,
-      nome: "Prof. Juliana Lilis",
-      qtdOrientandos: 3,
-      departamento: "Engenharia de Software",
-      capacidade: 5
-    },
-    {
-      id: 3,
-      nome: "Prof. Rafael Marinho",
-      qtdOrientandos: 2,
-      departamento: "Desenvolvimento Web",
-      capacidade: 4
-    },
-    {
-      id: 4,
-      nome: "Prof. Henaldo Barros",
-      qtdOrientandos: 4,
-      departamento: "Redes",
-      capacidade: 6
+      if (response.ok) {
+        const updatedBancas = bancasAgendadas.map(banca => {
+          if (banca._id === id) {
+            return { ...banca, status: 'aprovada' };
+          }
+          return banca;
+        });
+        setBancasAgendadas(updatedBancas);
+        alert('Banca aprovada com sucesso!');
+      } else {
+        const errorData = await response.json();
+        alert(`Erro: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Erro ao aprovar banca:', error);
+      alert('Erro ao conectar com o servidor');
     }
-  ];
-
-  const handleAprovarTCC = (id) => {
-    alert(`TCC ${id} aprovado com sucesso!`);
   };
 
-  const handleReprovarTCC = (id) => {
-    alert(`TCC ${id} reprovado!`);
+  const handleReprovarBanca = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/banca/${id}/reprovar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const updatedBancas = bancasAgendadas.map(banca => {
+          if (banca._id === id) {
+            return { ...banca, status: 'reprovada' };
+          }
+          return banca;
+        });
+        setBancasAgendadas(updatedBancas);
+        alert('Banca reprovada com sucesso!');
+      } else {
+        const errorData = await response.json();
+        alert(`Erro: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Erro ao reprovar banca:', error);
+      alert('Erro ao conectar com o servidor');
+    }
   };
 
   return (
@@ -141,95 +150,90 @@ function DashboardCoordenador() {
       <main className="coordenador-main">
         <div className="coordenador-dashboard">
           <section className="dashboard-section">
-            <h2>TCCs para Aprovação de Banca</h2>
+            <h2>Bancas Agendadas para Aprovação</h2>
             
             <div className="stats-container">
               <div className="stat-card">
                 <h3>Aguardando</h3>
-                <p className="stat-number">5</p>
+                <p className="stat-number">
+                  {loading ? '...' : bancasAgendadas.filter(b => b.status === 'agendada').length}
+                </p>
               </div>
               <div className="stat-card">
-                <h3>Aprovados</h3>
-                <p className="stat-number">12</p>
+                <h3>Aprovadas</h3>
+                <p className="stat-number">
+                  {loading ? '...' : bancasAgendadas.filter(b => b.status === 'aprovada').length}
+                </p>
               </div>
               <div className="stat-card">
-                <h3>Reprovados</h3>
-                <p className="stat-number">3</p>
+                <h3>Reprovadas</h3>
+                <p className="stat-number">
+                  {loading ? '...' : bancasAgendadas.filter(b => b.status === 'reprovada').length}
+                </p>
               </div>
             </div>
 
-            <div className="tcc-list-container">
-              <div className="tcc-list">
-                {tccsParaAprovar.map(tcc => (
-                  <div key={tcc.id} className="tcc-item">
-                    <div className="tcc-info">
-                      <h3>{tcc.titulo}</h3>
-                      <p><strong>Aluno:</strong> {tcc.aluno}</p>
-                      <p><strong>Orientador:</strong> {tcc.orientador}</p>
-                      <p><strong>Status:</strong> {tcc.status}</p>
-                      <p><strong>Submissão:</strong> {tcc.dataSubmissao}</p>
+            {loading ? (
+              <p>Carregando bancas agendadas...</p>
+            ) : bancasAgendadas.length === 0 ? (
+              <p>Não há bancas agendadas no momento.</p>
+            ) : (
+              <div className="banca-list-container">
+                <div className="banca-list">
+                  {bancasAgendadas.map(banca => (
+                    <div key={banca._id} className="banca-item">
+                      <div className="banca-info">
+                        <h3>{banca.titulo}</h3>
+                        <div className="banca-details">
+                          <p><strong>Aluno:</strong> {banca.alunoId.nomeCompleto}</p>
+                          <p><strong>Orientador:</strong> {banca.orientadorId.nomeCompleto}</p>
+                          <p><strong>Data:</strong> {new Date(banca.data_apresentacao).toLocaleString()}</p>
+                          <p><strong>Local:</strong> {banca.local_apresentacao}</p>
+                          <p><strong>Status:</strong> <span className={`status-${banca.status}`}>{banca.status}</span></p>
+                          
+                          <div className="banca-membros">
+                            <h4>Composição da Banca:</h4>
+                            <ul>
+                              {banca.banca.map((membro, index) => (
+                                <li key={index}>
+                                  <strong>{membro.papel}:</strong> {membro.professorId.nomeCompleto}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="banca-actions">
+                        <a 
+                          href={`http://localhost:5000${banca.arquivo_url}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="dashboard-button primary"
+                        >
+                          Ver TCC
+                        </a>
+                        {banca.status === 'agendada' && (
+                          <>
+                            <button 
+                              className="dashboard-button success"
+                              onClick={() => handleAprovarBanca(banca._id)}
+                            >
+                              Aprovar Banca
+                            </button>
+                            <button 
+                              className="dashboard-button danger"
+                              onClick={() => handleReprovarBanca(banca._id)}
+                            >
+                              Reprovar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="tcc-actions">
-                      <button className="dashboard-button primary">Visualizar</button>
-                      <button 
-                        className="dashboard-button success"
-                        onClick={() => handleAprovarTCC(tcc.id)}
-                      >
-                        Aprovar Banca
-                      </button>
-                      <button 
-                        className="dashboard-button danger"
-                        onClick={() => handleReprovarTCC(tcc.id)}
-                      >
-                        Reprovar
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
-
-          <section className="dashboard-section">
-            <h2>Designação de Orientadores</h2>
-            
-            <div className="stats-container">
-              <div className="stat-card">
-                <h3>Total</h3>
-                <p className="stat-number">15</p>
-              </div>
-              <div className="stat-card">
-                <h3>Ativos</h3>
-                <p className="stat-number">12</p>
-              </div>
-              <div className="stat-card">
-                <h3>Vagas</h3>
-                <p className="stat-number">23</p>
-              </div>
-            </div>
-
-            <div className="orientadores-list-container">
-              <div className="orientadores-list">
-                {orientadores.map(orientador => (
-                  <div key={orientador.id} className="orientador-item">
-                    <div className="orientador-info">
-                      <h3>{orientador.nome}</h3>
-                      <p><strong>Departamento:</strong> {orientador.departamento}</p>
-                      <p><strong>Orientandos:</strong> {orientador.qtdOrientandos}/{orientador.capacidade}</p>
-                      <progress 
-                        value={orientador.qtdOrientandos} 
-                        max={orientador.capacidade}
-                        className="orientador-progress"
-                      ></progress>
-                    </div>
-                    <div className="orientador-actions">
-                      <button className="dashboard-button secondary">Designar Aluno</button>
-                      <button className="dashboard-button primary">Editar</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </section>
         </div>
       </main>

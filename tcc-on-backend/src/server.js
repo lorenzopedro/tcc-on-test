@@ -44,11 +44,21 @@ const tccSchema = new mongoose.Schema({
   orientadorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   arquivo_url: { type: String, required: true },
   data_envio: { type: Date, default: Date.now },
-  status: { type: String, enum: ['pendente', 'andamento', 'concluido'], default: 'pendente' },
+  status: { 
+    type: String, 
+    enum: ['pendente', 'andamento', 'aprovado', 'agendado', 'aprovada', 'reprovada'], 
+    default: 'pendente' 
+  },
   feedback: { type: String, default: '' },
   feedback_text: { type: String, default: '' },
-  arquivo_corrigido_url: { type: String, default: '' }
-});
+  arquivo_corrigido_url: { type: String, default: '' },
+  data_apresentacao: { type: Date },
+  local_apresentacao: { type: String },
+  banca: [{
+    professorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    papel: { type: String }
+  }]
+}, { timestamps: true });
 
 const TCC = mongoose.model('TCC', tccSchema);
 
@@ -372,6 +382,82 @@ app.post('/tcc/:id/feedback', authMiddleware, upload.single('correctionFile'), a
   }
 });
 
+app.put('/tcc/:id/aprovar', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.tipo !== 'orientador') {
+      return res.status(403).json({ success: false, message: 'Apenas orientadores podem aprovar TCCs' });
+    }
+
+    const tcc = await TCC.findById(id);
+    if (!tcc) {
+      return res.status(404).json({ success: false, message: 'TCC não encontrado' });
+    }
+
+    if (tcc.orientadorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'Você não é o orientador deste TCC' });
+    }
+
+    tcc.status = 'aprovado';
+    await tcc.save();
+
+    res.json({ 
+      success: true, 
+      message: 'TCC aprovado com sucesso e encaminhado para o supervisor',
+      tcc
+    });
+  } catch (error) {
+    console.error('Erro ao aprovar TCC:', error);
+    res.status(500).json({ success: false, message: 'Erro ao aprovar TCC' });
+  }
+});
+
+app.put('/tcc/:id/agendar', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data_apresentacao, local_apresentacao, banca } = req.body;
+
+    if (req.user.tipo !== 'supervisor') {
+      return res.status(403).json({ success: false, message: 'Apenas supervisores podem agendar apresentações' });
+    }
+
+    const tcc = await TCC.findById(id);
+    if (!tcc) {
+      return res.status(404).json({ success: false, message: 'TCC não encontrado' });
+    }
+
+    tcc.data_apresentacao = new Date(data_apresentacao);
+    tcc.local_apresentacao = local_apresentacao;
+    tcc.banca = banca;
+    tcc.status = 'agendado';
+
+    await tcc.save();
+
+    res.json({ 
+      success: true, 
+      message: 'Apresentação agendada com sucesso',
+      tcc
+    });
+  } catch (error) {
+    console.error('Erro ao agendar apresentação:', error);
+    res.status(500).json({ success: false, message: 'Erro ao agendar apresentação' });
+  }
+});
+
+app.get('/api/professores', authMiddleware, async (req, res) => {
+  try {
+    const professores = await User.find({ 
+      tipo: { $in: ['orientador', 'coordenador'] } 
+    }).select('nomeCompleto _id');
+    
+    res.json({ success: true, professores });
+  } catch (error) {
+    console.error('Erro ao buscar professores:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar professores' });
+  }
+});
+
 app.get('/aluno/feedback', authMiddleware, async (req, res) => {
   try {
     if (req.user.tipo !== 'aluno') {
@@ -391,7 +477,7 @@ app.get('/aluno/feedback', authMiddleware, async (req, res) => {
       feedback: {
         text: tcc.feedback_text,
         correctedFile: tcc.arquivo_corrigido_url,
-        lastUpdate: tcc.updatedAt
+        lastUpdate: tcc.updatedAt || tcc.data_envio
       }
     });
   } catch (error) {
@@ -454,6 +540,93 @@ app.get('/supervisor/dashboard', authMiddleware, (req, res) => {
     message: 'Dashboard do Supervisor',
     user: req.user
   });
+});
+
+app.get('/supervisor/tccs-aprovados', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.tipo !== 'supervisor') {
+      return res.status(403).json({ success: false, message: 'Acesso não autorizado' });
+    }
+
+    const tccs = await TCC.find({ status: 'aprovado' })
+      .populate('alunoId', 'nomeCompleto matricula')
+      .populate('orientadorId', 'nomeCompleto')
+      .sort({ data_envio: -1 });
+
+    res.json({ success: true, tccs });
+  } catch (error) {
+    console.error('Erro ao buscar TCCs aprovados:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar TCCs aprovados' });
+  }
+});
+
+app.get('/coordenador/bancas-agendadas', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.tipo !== 'coordenador') {
+      return res.status(403).json({ success: false, message: 'Acesso não autorizado' });
+    }
+
+    const bancas = await TCC.find({ status: 'agendado' })
+      .populate('alunoId', 'nomeCompleto matricula')
+      .populate('orientadorId', 'nomeCompleto')
+      .populate('banca.professorId', 'nomeCompleto')
+      .sort({ data_apresentacao: 1 });
+
+    res.json({ success: true, bancas });
+  } catch (error) {
+    console.error('Erro ao buscar bancas agendadas:', error);
+    res.status(500).json({ success: false, message: 'Erro ao buscar bancas agendadas' });
+  }
+});
+
+app.put('/banca/:id/aprovar', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.tipo !== 'coordenador') {
+      return res.status(403).json({ success: false, message: 'Apenas coordenadores podem aprovar bancas' });
+    }
+
+    const tcc = await TCC.findByIdAndUpdate(id, { status: 'aprovada' }, { new: true });
+
+    if (!tcc) {
+      return res.status(404).json({ success: false, message: 'Banca não encontrada' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Banca aprovada com sucesso',
+      tcc
+    });
+  } catch (error) {
+    console.error('Erro ao aprovar banca:', error);
+    res.status(500).json({ success: false, message: 'Erro ao aprovar banca' });
+  }
+});
+
+app.put('/banca/:id/reprovar', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.tipo !== 'coordenador') {
+      return res.status(403).json({ success: false, message: 'Apenas coordenadores podem reprovar bancas' });
+    }
+
+    const tcc = await TCC.findByIdAndUpdate(id, { status: 'reprovada' }, { new: true });
+
+    if (!tcc) {
+      return res.status(404).json({ success: false, message: 'Banca não encontrada' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Banca reprovada com sucesso',
+      tcc
+    });
+  } catch (error) {
+    console.error('Erro ao reprovar banca:', error);
+    res.status(500).json({ success: false, message: 'Erro ao reprovar banca' });
+  }
 });
 
 app.use((err, req, res, next) => {
