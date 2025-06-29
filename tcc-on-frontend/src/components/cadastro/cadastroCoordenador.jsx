@@ -7,20 +7,19 @@ const CadastroCoordenador = () => {
     email: '',
     departamento: '',
     cargo: '',
-    usuario: '', // Novo campo adicionado
+    usuario: '',
     senha: '',
-    confirmarSenha: '' // Novo campo adicionado
+    confirmarSenha: ''
   });
 
   const [erro, setErro] = useState('');
+  const [sucesso, setSucesso] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({...formData, [e.target.name]: e.target.value});
     if (erro) setErro('');
   };
-
-  // tcc-on-frontend/src/components/cadastro/cadastroCoordenador.jsx
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,7 +39,6 @@ const CadastroCoordenador = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // Ajustes aqui
           nomeCompleto: formData.nome,
           email: formData.email,
           username: formData.usuario,
@@ -52,8 +50,10 @@ const CadastroCoordenador = () => {
       });
 
       if (response.ok) {
-        alert('Coordenador cadastrado com sucesso! Você será redirecionado para o login.');
-        navigate('/login');
+        setSucesso(true);
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
       } else {
         const errorData = await response.json();
         setErro(errorData.message || 'Erro no cadastro. Verifique os dados.');
@@ -68,90 +68,104 @@ const CadastroCoordenador = () => {
     <div style={styles.page}>
       <div style={styles.container}>
         <h2 style={styles.title}>Cadastro de Coordenador</h2>
-        {erro && <div style={styles.erro}>{erro}</div>}
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <input
-            style={styles.input}
-            type="text"
-            name="nome"
-            placeholder="Nome completo"
-            value={formData.nome}
-            onChange={handleChange}
-            required
-          />
+        
+        {sucesso ? (
+          <div style={styles.sucessoContainer}>
+            <svg style={styles.sucessoIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+            </svg>
+            <h3 style={styles.sucessoTitulo}>Cadastro realizado com sucesso!</h3>
+            <p style={styles.sucessoTexto}>Você será redirecionado para a página de login em instantes...</p>
+            <div style={styles.loader}></div>
+          </div>
+        ) : (
+          <>
+            {erro && <div style={styles.erro}>{erro}</div>}
+            <form onSubmit={handleSubmit} style={styles.form}>
+              <input
+                style={styles.input}
+                type="text"
+                name="nome"
+                placeholder="Nome completo"
+                value={formData.nome}
+                onChange={handleChange}
+                required
+              />
 
-          <input
-            style={styles.input}
-            type="email"
-            name="email"
-            placeholder="E-mail institucional"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+              <input
+                style={styles.input}
+                type="email"
+                name="email"
+                placeholder="E-mail institucional"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
 
-          <select
-            style={styles.select}
-            name="departamento"
-            value={formData.departamento}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Selecione o departamento</option>
-            <option value="Computação">Computação</option>
-            <option value="Engenharia">Engenharia</option>
-            <option value="Matemática">Matemática</option>
-          </select>
+              <select
+                style={styles.select}
+                name="departamento"
+                value={formData.departamento}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecione o departamento</option>
+                <option value="Computação">Computação</option>
+                <option value="Engenharia">Engenharia</option>
+                <option value="Matemática">Matemática</option>
+              </select>
 
-          <select
-            style={styles.select}
-            name="cargo"
-            value={formData.cargo}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Selecione o cargo</option>
-            <option value="Coordenador de Curso">Coordenador de Curso</option>
-            <option value="Chefe de Departamento">Chefe de Departamento</option>
-            <option value="Vice-Diretor">Vice-Diretor</option>
-          </select>
+              <select
+                style={styles.select}
+                name="cargo"
+                value={formData.cargo}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Selecione o cargo</option>
+                <option value="Coordenador de Curso">Coordenador de Curso</option>
+                <option value="Chefe de Departamento">Chefe de Departamento</option>
+                <option value="Vice-Diretor">Vice-Diretor</option>
+              </select>
 
-          <input
-            style={styles.input}
-            type="text"
-            name="usuario"
-            placeholder="Nome de usuário"
-            value={formData.usuario}
-            onChange={handleChange}
-            required
-          />
+              <input
+                style={styles.input}
+                type="text"
+                name="usuario"
+                placeholder="Nome de usuário"
+                value={formData.usuario}
+                onChange={handleChange}
+                required
+              />
 
-          <input
-            style={styles.input}
-            type="password"
-            name="senha"
-            placeholder="Senha (mínimo 6 caracteres)"
-            value={formData.senha}
-            onChange={handleChange}
-            minLength="6"
-            required
-          />
+              <input
+                style={styles.input}
+                type="password"
+                name="senha"
+                placeholder="Senha (mínimo 6 caracteres)"
+                value={formData.senha}
+                onChange={handleChange}
+                minLength="6"
+                required
+              />
 
-          <input
-            style={styles.input}
-            type="password"
-            name="confirmarSenha"
-            placeholder="Confirme sua senha"
-            value={formData.confirmarSenha}
-            onChange={handleChange}
-            minLength="6"
-            required
-          />
+              <input
+                style={styles.input}
+                type="password"
+                name="confirmarSenha"
+                placeholder="Confirme sua senha"
+                value={formData.confirmarSenha}
+                onChange={handleChange}
+                minLength="6"
+                required
+              />
 
-          <button type="submit" style={styles.button}>
-            Cadastrar
-          </button>
-        </form>
+              <button type="submit" style={styles.button}>
+                Cadastrar
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
@@ -202,6 +216,10 @@ const styles = {
     backgroundColor: '#fff',
     outline: 'none',
     transition: 'border 0.3s',
+    ':focus': {
+      borderColor: '#0056d2',
+      boxShadow: '0 0 0 2px rgba(0, 86, 210, 0.2)'
+    }
   },
   select: {
     padding: '12px 15px',
@@ -211,6 +229,10 @@ const styles = {
     backgroundColor: '#fff',
     outline: 'none',
     cursor: 'pointer',
+    ':focus': {
+      borderColor: '#0056d2',
+      boxShadow: '0 0 0 2px rgba(0, 86, 210, 0.2)'
+    }
   },
   button: {
     padding: '12px',
@@ -234,6 +256,50 @@ const styles = {
     marginBottom: '15px',
     textAlign: 'center',
     fontSize: '14px',
+  },
+  sucessoContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+    padding: '20px',
+  },
+  sucessoIcon: {
+    width: '60px',
+    height: '60px',
+    color: '#4caf50',
+    marginBottom: '20px',
+  },
+  sucessoTitulo: {
+    fontSize: '22px',
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    marginBottom: '10px',
+  },
+  sucessoTexto: {
+    fontSize: '16px',
+    color: '#333',
+    marginBottom: '20px',
+  },
+  loader: {
+    width: '50px',
+    height: '5px',
+    background: '#e0e0e0',
+    borderRadius: '3px',
+    position: 'relative',
+    overflow: 'hidden',
+    ':before': {
+      content: '""',
+      position: 'absolute',
+      height: '100%',
+      width: '50%',
+      background: '#4caf50',
+      animation: 'loading 1.5s infinite ease-in-out'
+    }
+  },
+  '@keyframes loading': {
+    '0%': { transform: 'translateX(-100%)' },
+    '100%': { transform: 'translateX(200%)' }
   }
 };
 

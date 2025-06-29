@@ -95,7 +95,6 @@ const Login = () => {
   );
 };
 
-// Mantenha os estilos existentes, mas adicione o estilo para erro
 const styles = {
   page: {
     fontFamily: "'Inter', sans-serif",

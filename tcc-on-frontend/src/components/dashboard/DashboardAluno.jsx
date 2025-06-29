@@ -159,7 +159,7 @@ function Dashboard() {
               <h3>Enviar TCC</h3>
               <div className="upload-area">
                 <div className="form-group">
-                  <label htmlFor="tcc-title">Observação</label>
+                  <label htmlFor="tcc-title">Título do trabalho / Observação</label>
                   <input 
                     type="text" 
                     id="tcc-title"
@@ -259,7 +259,6 @@ function Dashboard() {
       <nav className="dashboard-nav">
         <ul>
           <li><a href="/dashboard" className="active">Início</a></li>
-          <li><a href="/tccs">TCCs</a></li>
           <li>
             <a href="/mensagens">
               Mensagens
