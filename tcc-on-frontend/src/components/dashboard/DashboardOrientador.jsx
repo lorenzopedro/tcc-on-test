@@ -296,7 +296,6 @@ function DashboardOrientador() {
       <nav className="orientador-nav">
         <ul>
           <li><a href="/orientador" className="active">Início</a></li>
-          <li><a href="/orientador/tccs">Meus Orientandos</a></li>
           <li>
             <a href="/orientador/mensagens">
               Mensagens
@@ -324,7 +323,7 @@ function DashboardOrientador() {
               </div>
               <div className="stat-card">
                 <h3>Aprovados</h3>
-                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'aprovado').length}</p>
+                <p className="stat-number">{tccs.filter(tcc => tcc.status === 'aprovado' || tcc.status === 'agendado').length}</p>
               </div>
             </div>
 
@@ -359,7 +358,7 @@ function DashboardOrientador() {
                           rel="noopener noreferrer"
                           className="dashboard-button primary"
                         >
-                          Ver PDF
+                          Ver TCC
                         </a>
                         {tcc.status === 'andamento' && (
                           <button 
@@ -369,7 +368,7 @@ function DashboardOrientador() {
                             Aprovar TCC
                           </button>
                         )}
-                        {tcc.status !== 'aprovado' && (
+                        {(tcc.status === 'pendente' || tcc.status === 'andamento') && tcc.status !== 'agendado' && (
                           <button 
                             className="dashboard-button secondary"
                             onClick={() => handleOpenFeedbackModal(tcc._id)}

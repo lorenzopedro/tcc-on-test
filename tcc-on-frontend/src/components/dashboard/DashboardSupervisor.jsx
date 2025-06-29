@@ -311,14 +311,6 @@ function DashboardSupervisor() {
       <nav className="supervisor-nav">
         <ul>
           <li><a href="/supervisor" className="active">Início</a></li>
-          <li>
-            <a href="/supervisor/mensagens">
-              Mensagens
-              {userData.notifications > 0 && (
-                <span className="nav-notification">{userData.notifications}</span>
-              )}
-            </a>
-          </li>
         </ul>
       </nav>
 

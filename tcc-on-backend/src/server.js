@@ -72,12 +72,11 @@ const alunoSchema = Joi.object({
   confirmacaoSenha: Joi.string().valid(Joi.ref('senha')).required()
 });
 
-// SCHEMA CORRIGIDO: campo curso adicionado
 const orientadorSchema = Joi.object({
   nomeCompleto: Joi.string().required(),
   email: Joi.string().email().required(),
   username: Joi.string().alphanum().min(3).max(30).required(),
-  curso: Joi.string().required(), // CAMPO ADICIONADO
+  curso: Joi.string().required(),
   senha: Joi.string().min(6).required(),
   confirmacaoSenha: Joi.string().valid(Joi.ref('senha')).required()
 });
