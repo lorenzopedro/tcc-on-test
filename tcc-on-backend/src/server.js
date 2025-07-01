@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const jwt =require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const Joi = require('joi');
 const multer = require('multer');
@@ -65,6 +65,18 @@ const tccSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const TCC = mongoose.model('TCC', tccSchema);
+
+// NOVO: Schema para Notificações
+const notificationSchema = new mongoose.Schema({
+    recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    message: { type: String, required: true },
+    read: { type: Boolean, default: false },
+    tcc: { type: mongoose.Schema.Types.ObjectId, ref: 'TCC' }
+}, { timestamps: true });
+
+const Notification = mongoose.model('Notification', notificationSchema);
+
 
 const alunoSchema = Joi.object({
     nomeCompleto: Joi.string().required(),
@@ -382,6 +394,7 @@ app.get('/api/orientadores', authMiddleware, async (req, res) => {
     }
 });
 
+// EDITADO: Rota de Upload de TCC com criação de notificação
 app.post('/tcc/upload', authMiddleware, upload.single('tccFile'), async (req, res) => {
     try {
         const { titulo, orientadorId } = req.body;
@@ -399,6 +412,17 @@ app.post('/tcc/upload', authMiddleware, upload.single('tccFile'), async (req, re
         });
 
         await novoTCC.save();
+        
+        // NOVO: Criar notificação para o orientador
+        const notificationMessage = `O Aluno ${req.user.nomeCompleto} enviou um TCC para análise.`;
+        const newNotification = new Notification({
+            recipient: orientadorId,
+            sender: req.user._id,
+            message: notificationMessage,
+            tcc: novoTCC._id
+        });
+        await newNotification.save();
+
 
         res.json({
             success: true,
@@ -410,6 +434,7 @@ app.post('/tcc/upload', authMiddleware, upload.single('tccFile'), async (req, re
         res.status(500).json({ success: false, message: 'Erro ao enviar TCC' });
     }
 });
+
 
 app.get('/orientador/tccs', authMiddleware, async (req, res) => {
     try {
@@ -439,6 +464,7 @@ app.get('/orientador/tccs', authMiddleware, async (req, res) => {
     }
 });
 
+// EDITADO: Rota de Feedback com criação de notificação
 app.post('/tcc/:id/feedback', authMiddleware, upload.single('correctionFile'), async (req, res) => {
     try {
         const { id } = req.params;
@@ -466,6 +492,17 @@ app.post('/tcc/:id/feedback', authMiddleware, upload.single('correctionFile'), a
         tcc.status = 'andamento';
 
         await tcc.save();
+        
+        // NOVO: Criar notificação para o aluno
+        const notificationMessage = `O Orientador ${req.user.nomeCompleto} enviou um feedback sobre seu TCC!`;
+        const newNotification = new Notification({
+            recipient: tcc.alunoId,
+            sender: req.user._id,
+            message: notificationMessage,
+            tcc: tcc._id
+        });
+        await newNotification.save();
+
 
         res.json({
             success: true,
@@ -477,6 +514,61 @@ app.post('/tcc/:id/feedback', authMiddleware, upload.single('correctionFile'), a
         res.status(500).json({ success: false, message: 'Erro ao enviar feedback' });
     }
 });
+
+// ... (restante do código original)
+
+// ===============================================
+// NOVAS ROTAS PARA NOTIFICAÇÕES
+// ===============================================
+
+// Rota para buscar todas as notificações do usuário
+app.get('/api/notifications', authMiddleware, async (req, res) => {
+    try {
+        const notifications = await Notification.find({ recipient: req.user._id })
+            .populate('sender', 'nomeCompleto tipo')
+            .sort({ createdAt: -1 });
+        res.json({ success: true, notifications });
+    } catch (error) {
+        console.error('Erro ao buscar notificações:', error);
+        res.status(500).json({ success: false, message: 'Erro ao buscar notificações' });
+    }
+});
+
+// Rota para contar notificações não lidas
+app.get('/api/notifications/unread-count', authMiddleware, async (req, res) => {
+    try {
+        const count = await Notification.countDocuments({
+            recipient: req.user._id,
+            read: false
+        });
+        res.json({ success: true, count });
+    } catch (error) {
+        console.error('Erro ao contar notificações não lidas:', error);
+        res.status(500).json({ success: false, message: 'Erro ao contar notificações' });
+    }
+});
+
+// EDITADO: Rota para marcar uma notificação específica como lida
+app.put('/api/notifications/:id/read', authMiddleware, async (req, res) => {
+    try {
+        const notification = await Notification.findOneAndUpdate(
+            { _id: req.params.id, recipient: req.user._id },
+            { read: true },
+            { new: true }
+        );
+
+        if (!notification) {
+            return res.status(404).json({ success: false, message: 'Notificação não encontrada.' });
+        }
+
+        res.json({ success: true, message: 'Notificação marcada como lida.' });
+    } catch (error) {
+        console.error('Erro ao marcar notificação como lida:', error);
+        res.status(500).json({ success: false, message: 'Erro ao marcar notificação.' });
+    }
+});
+
+// ===============================================
 
 app.put('/tcc/:id/aprovar', authMiddleware, async (req, res) => {
     try {

@@ -21,16 +21,37 @@ function DashboardOrientador() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [tccToApprove, setTccToApprove] = useState(null);
 
+  // EDITADO: Função para buscar notificações
+  const fetchUnreadNotifications = async () => {
+    try {
+        const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setUserData(prevData => ({ ...prevData, notifications: data.count }));
+        }
+    } catch (error) {
+        console.error('Erro ao buscar notificações não lidas:', error);
+    }
+  };
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser) {
-      setUserData({
+      setUserData(prevData => ({
+        ...prevData,
         name: storedUser.nomeCompleto || storedUser.username,
-        role: "Orientador",
         departamento: storedUser.departamento || "Sistemas de Informação",
-        notifications: storedUser.notifications || 0
-      });
+      }));
     }
+    
+    fetchUnreadNotifications(); // Busca inicial
+    const interval = setInterval(fetchUnreadNotifications, 30000); // Busca a cada 30 segundos
+    return () => clearInterval(interval);
+
   }, []);
 
   useEffect(() => {
@@ -286,7 +307,8 @@ function DashboardOrientador() {
             <span className="user-name">Bem-vindo, {userData.name}</span>
             <span className="user-role">{userData.role} - {userData.departamento}</span>
           </div>
-          <div className="notification-badge">
+          {/* EDITADO: Navegação para a caixa de entrada */}
+          <div className="notification-badge" onClick={() => navigate('/mensagens')}>
             <span>{userData.notifications}</span>
           </div>
           <button onClick={handleLogout} className="logout-button">Sair</button>
@@ -295,9 +317,9 @@ function DashboardOrientador() {
 
       <nav className="orientador-nav">
         <ul>
-          <li><a href="/orientador" className="active">Início</a></li>
+          <li><a href="/dashboard-orientador" className="active">Início</a></li>
           <li>
-            <a href="/orientador/mensagens">
+            <a href="/mensagens">
               Mensagens
               {userData.notifications > 0 && (
                 <span className="nav-notification">{userData.notifications}</span>

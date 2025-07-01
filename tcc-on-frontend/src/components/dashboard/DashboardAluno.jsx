@@ -20,14 +20,31 @@ function Dashboard() {
   const [correctedFileUrl, setCorrectedFileUrl] = useState('');
   const [feedbackDate, setFeedbackDate] = useState('');
 
+  // EDITADO: Função para buscar notificações
+  const fetchUnreadNotifications = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUserData(prevData => ({ ...prevData, notifications: data.count }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar notificações não lidas:', error);
+    }
+  };
+
+
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser) {
-      setUserData({
-        ...userData,
+      setUserData(prevData => ({
+        ...prevData,
         name: storedUser.nomeCompleto || storedUser.username,
-        notifications: storedUser.notifications || 0
-      });
+      }));
     }
 
     const fetchOrientadores = async () => {
@@ -76,6 +93,10 @@ function Dashboard() {
 
     fetchOrientadores();
     fetchFeedback();
+    fetchUnreadNotifications(); // EDITADO: Busca inicial
+
+    const interval = setInterval(fetchUnreadNotifications, 30000); // EDITADO: Busca a cada 30 segundos
+    return () => clearInterval(interval); // Limpa o intervalo
   }, []);
 
   const handleLogout = () => {
@@ -249,7 +270,8 @@ function Dashboard() {
             <span className="user-name">Bem-vindo, {userData.name}</span>
             <span className="user-role">{userData.role}</span>
           </div>
-          <div className="notification-badge">
+          {/* EDITADO: Navegação para a caixa de entrada */}
+          <div className="notification-badge" onClick={() => navigate('/mensagens')}>
             <span>{userData.notifications}</span>
           </div>
           <button onClick={handleLogout} className="logout-button">Sair</button>
@@ -258,7 +280,7 @@ function Dashboard() {
 
       <nav className="dashboard-nav">
         <ul>
-          <li><a href="/dashboard" className="active">Início</a></li>
+          <li><a href="/dashboard-aluno" className="active">Início</a></li>
           <li>
             <a href="/mensagens">
               Mensagens

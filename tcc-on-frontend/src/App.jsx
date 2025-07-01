@@ -11,6 +11,7 @@ import DashboardAluno from "./components/dashboard/DashboardAluno";
 import DashboardOrientador from "./components/dashboard/DashboardOrientador";
 import DashboardCoordenador from './components/dashboard/DashboardCoordenador';
 import DashboardSupervisor from './components/dashboard/DashboardSupervisor';
+import Mensagens from './components/mensagens/Mensagens';
 
 
 function App() {
@@ -29,7 +30,8 @@ function App() {
         <Route path="/dashboard-aluno" element={<DashboardAluno />} />
         <Route path="/dashboard-orientador" element={<DashboardOrientador />} />
         <Route path="/dashboard-coordenador" element={<DashboardCoordenador />} />
-        <Route path="/dashboard-supervisor" element={<DashboardSupervisor />} />       
+        <Route path="/dashboard-supervisor" element={<DashboardSupervisor />} />
+        <Route path="/mensagens" element={<Mensagens />} />       
       </Routes>
     </Router>
   );
